@@ -38,7 +38,7 @@ items_file = "list"
 
 # Main
 def main():
-    progress_bar = ProgressBar()
+    # progress_bar = ProgressBar()
 
     items = [
         item.strip() for item in open(items_file, "r").readlines() 
