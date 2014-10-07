@@ -33,23 +33,28 @@ scheme = "http"
 port = 80
 
 import_folder = "import"
-item_list_file = "list"
+items_file = "list"
 
 
 # Main
 def main():
     progress_bar = ProgressBar()
 
-    item_list = [
-        item.strip() for item in open(item_list_file, "r").readlines() 
+    items = [
+        item.strip() for item in open(items_file, "r").readlines() 
         if not item.startswith("#")
     ]
 
-    timed_print("starting import of {0} items from '{1}'".format(len(item_list), domain))
+    timed_print("starting import of {0} items from '{1}'".format(len(items), domain))
 
-    for item in progress_bar(item_list):
+    # for item in progress_bar(items):
+    for item in items:
         item_url = "{0}://{1}:{2}/{3}/{4}".format(
             scheme, domain, port, alternate, item
+        )
+
+        timed_print("{0}/{1}: {2}".format(
+            items.index(item) + 1, len(items), item)
         )
 
         local_path = "./{0}/{1}.html".format(import_folder, item)
@@ -61,7 +66,13 @@ def main():
 
         downloaded_urls = []
 
-        for image in soup.findAll("img"):
+        images = soup.findAll("img")
+
+        for image in images:
+            timed_print("- image {0}/{1}: {2}".format(
+                images.index(image) + 1, len(images), image["src"])
+            )
+
             image_url = build_image_url(image["src"])
 
             if image_url in downloaded_urls:
@@ -80,10 +91,16 @@ def main():
 
 
 def md5_hash(string):
+    """
+    Returns the md5 hash of a string
+    """
     return md5(string.encode("utf-8")).hexdigest()
 
 
 def build_image_url(tag):
+    """
+    Builds the full url of an image from its tag attributes
+    """
     source = urlparse(tag)
 
     path = source.path[1:] if source.path.startswith("/") else source.path
