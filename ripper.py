@@ -17,7 +17,7 @@ Ubuntu documentation ripper
 
 from bs4 import BeautifulSoup
 from hashlib import md5
-from progressbar import ProgressBar
+from optparse import OptionParser
 from utility import timed_print
 from urlparse import urlparse
 
@@ -32,13 +32,10 @@ alternate = "_export/xhtml"
 scheme = "http"
 port = 80
 
-import_folder = "import"
-items_file = "list"
-
-
 # Main
-def main():
-    # progress_bar = ProgressBar()
+def main(options, arguments):
+    items_file = arguments[0]
+    import_folder = arguments[1]
 
     items = [
         item.strip() for item in open(items_file, "r").readlines() 
@@ -47,7 +44,6 @@ def main():
 
     timed_print("starting import of {0} items from '{1}'".format(len(items), domain))
 
-    # for item in progress_bar(items):
     for item in items:
         item_url = "{0}://{1}:{2}/{3}/{4}".format(
             scheme, domain, port, alternate, item
@@ -59,33 +55,34 @@ def main():
 
         local_path = "./{0}/{1}.html".format(import_folder, item)
 
-        soup = request_soup(item_url, delay=3)
+        soup = request_soup(item_url, delay=options.delay)
 
         if soup.find(id="cette_page_n_existe_pas_encore"):
             continue # the item's web page does not exist
 
         downloaded_urls = []
 
-        images = soup.findAll("img")
+        if options.images:
+            images = soup.findAll("img")
 
-        for image in images:
-            timed_print("- image {0}/{1}: {2}".format(
-                images.index(image) + 1, len(images), image["src"])
-            )
+            for image in images:
+                timed_print("- image {0}/{1}: {2}".format(
+                    images.index(image) + 1, len(images), image["src"])
+                )
 
-            image_url = build_image_url(image["src"])
+                image_url = build_image_url(image["src"])
 
-            if image_url in downloaded_urls:
-                continue # already downloaded
-            
-            downloaded_urls.append(image_url)
+                if image_url in downloaded_urls:
+                    continue # already downloaded
+                
+                downloaded_urls.append(image_url)
 
-            image_hash = md5_hash(image_url)
+                image_hash = md5_hash(image_url)
 
-            image["src"] = "image_{0}".format(image_hash)
-            image_path = "{0}/{1}".format(os.path.dirname(local_path), image["src"])
+                image["src"] = "image_{0}".format(image_hash)
+                image_path = "{0}/{1}".format(os.path.dirname(local_path), image["src"])
 
-            download_file(image_url, image_path, delay=3)
+                download_file(image_url, image_path, delay=options.delay)
 
         write_soup(soup, local_path)
 
@@ -145,4 +142,23 @@ def download_file(url, path, delay=0):
 
 # Launch
 if __name__ == "__main__":
-    main()
+    op = OptionParser(usage="usage: %prog [options] item_file output_directory")
+
+    op.add_option("-d", "--delay",
+        dest="delay",
+        type="int",
+        default=3,
+        help="delay between each request (defaults to 3)")
+
+    op.add_option("--images",
+        dest="images",
+        default=False,
+        action="store_true",
+        help="check this flag if you want download images found in the documentation")
+
+    options, arguments = op.parse_args()
+
+    if len(arguments) != 2:
+        op.error("this script takes exactly two arguments: \"item_file\" and \"output_directory\"")
+
+    main(options, arguments)
