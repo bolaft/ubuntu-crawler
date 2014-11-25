@@ -154,7 +154,7 @@ if __name__ == "__main__":
         dest="images",
         default=False,
         action="store_true",
-        help="check this flag if you want download images found in the documentation")
+        help="check this flag if you want to download images found in the documentation")
 
     options, arguments = op.parse_args()
 
